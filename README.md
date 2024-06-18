@@ -159,12 +159,12 @@
 
     cards.forEach(card => {
         card.addEventListener('click', () => {
-            if (!castVoteButton.classList.contains('greyed-out') && playerName !== '') {
+            //if (!castVoteButton.classList.contains('greyed-out') && playerName !== '') {
                 const selectedCard = card.textContent;
                 selectCard(card);
                 votes[playerName] = selectedCard;
                 updateCastVoteButtonState();
-            }
+            //}
         });
     });
 
@@ -241,9 +241,9 @@
         });
         castVoteButton.textContent = 'Cast your vote';
         castVoteButton.classList.add('greyed-out');
-        castVoteButton.removeEventListener('click', showVotes);
+        castVoteButton.EventListener('click', showVotes);
         castVoteButton.addEventListener('click', castVoteHandler);
-        resetVotesButton.classList.add('greyed-out');
+        resetVotesButton.classList.remove('greyed-out');
     }
 
     function resetVotes() {
