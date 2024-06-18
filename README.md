@@ -7,261 +7,201 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+            text-align: center;
+            margin: 20px;
         }
         .container {
-            text-align: center;
-            display: none;
+            max-width: 600px;
+            margin: 0 auto;
         }
-        .container.visible {
-            display: block;
-        }
-        .button-container {
-            margin-top: 20px;
-        }
-        .button-container button {
-            margin: 10px;
+        .button {
+            display: inline-block;
             padding: 10px 20px;
             font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            margin-top: 10px;
         }
-        .greyed-out {
-            background-color: grey;
+        .button:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
+        }
+        .input-field {
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
         }
         .player-box {
             display: inline-block;
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 80px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
             margin: 10px;
-            background-color: #ccc;
+            padding: 5px;
             text-align: center;
             vertical-align: top;
-            line-height: 1.5;
-            border: 1px solid #999;
         }
-        .action-buttons {
-            margin-top: 20px;
-        }
-        .card-container {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        .card {
+        .vote-card {
+            display: inline-block;
             width: 60px;
-            height: 80px;
-            margin: 0 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            border: 1px solid #000;
-            cursor: pointer;
+            height: 90px;
             background-color: #fff;
-            transition: background-color 0.3s ease;
+            border: 1px solid #000;
+            margin: 5px;
+            padding: 5px;
+            text-align: center;
+            cursor: pointer;
         }
-        .card.selected {
-            background-color: green;
-            color: white;
-        }
-        .bottom-right {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
+        .selected {
+            background-color: lightgreen;
         }
     </style>
 </head>
 <body>
-
-<div id="opening-screen" class="container visible">
-    <h1>Planning Poker</h1>
-    <div class="button-container">
-        <button id="join-game">Join Game</button>
+    <div class="container" id="opening-screen">
+        <h1>Planning Poker</h1>
+        <button class="button" onclick="showNameInput()">Join Game</button>
     </div>
-</div>
 
-<div id="name-screen" class="container">
-    <h2>What is your name?</h2>
-    <input type="text" id="player-name" placeholder="Enter your name">
-    <button id="enter-name" class="greyed-out">Enter</button>
-</div>
-
-<div id="game-board" class="container">
-    <h1>Planning Poker</h1>
-    <div id="players" class="centered"></div>
-    <div class="action-buttons">
-        <button id="cast-vote" class="greyed-out">Cast your vote</button>
-        <button id="reset-votes" class="greyed-out">Reset Votes</button>
-        <button id="exit-game">Exit</button>
-        <button id="invite-players">Link</button>
+    <div class="container" id="name-input-screen" style="display: none;">
+        <h2>What is your name?</h2>
+        <input type="text" id="playerName" class="input-field" placeholder="Enter your name">
+        <button class="button" id="enterButton" onclick="enterName()" disabled>Enter</button>
     </div>
-    <div class="card-container">
-        <div class="card">0</div>
-        <div class="card">1</div>
-        <div class="card">2</div>
-        <div class="card">5</div>
-        <div class="card">8</div>
-        <div class="card">13</div>
-        <div class="card">20</div>
-        <div class="card">40</div>
-        <div class="card">?</div>
+
+    <div class="container" id="game-board" style="display: none;">
+        <h2>Planning Poker</h2>
+        
+        <div id="playerBoxes">
+            <!-- Player boxes will be dynamically added here -->
+        </div>
+
+        <div>
+            <button class="button" id="castVoteButton" onclick="castVote()" disabled>Cast your vote</button>
+            <button class="button" id="resetVotesButton" onclick="resetVotes()" disabled>Reset Votes</button>
+            <button class="button" onclick="exitGame()">Exit</button>
+        </div>
+
+        <div id="voteCards">
+            <!-- Voting cards will be dynamically added here -->
+        </div>
+
+        <button class="button" id="showVotesButton" onclick="showVotes()" style="display: none;">Show votes!</button>
     </div>
-    <button id="new-game" class="bottom-right">New Game</button>
-</div>
 
-<script>
-    let playerName = '';
-    let players = [];
-    let votes = {};
-    let votedPlayers = new Set();
+    <script>
+        let players = [];
+        let selectedCard = null;
+        let votesSubmitted = false;
 
-    const joinGameButton = document.getElementById('join-game');
-    const openingScreen = document.getElementById('opening-screen');
-    const nameScreen = document.getElementById('name-screen');
-    const gameBoard = document.getElementById('game-board');
-    const playerNameInput = document.getElementById('player-name');
-    const enterNameButton = document.getElementById('enter-name');
-    const playersDiv = document.getElementById('players');
-    const castVoteButton = document.getElementById('cast-vote');
-    const invitePlayersButton = document.getElementById('invite-players');
-    const exitGameButton = document.getElementById('exit-game');
-    const resetVotesButton = document.getElementById('reset-votes');
-    const newGameButton = document.getElementById('new-game');
-    const cards = document.querySelectorAll('.card');
-
-    joinGameButton.addEventListener('click', () => {
-        openingScreen.classList.remove('visible');
-        nameScreen.classList.add('visible');
-    });
-
-    playerNameInput.addEventListener('input', () => {
-        if (playerNameInput.value.trim() !== '') {
-            enterNameButton.classList.remove('greyed-out');
-        } else {
-            enterNameButton.classList.add('greyed-out');
+        function showNameInput() {
+            document.getElementById('opening-screen').style.display = 'none';
+            document.getElementById('name-input-screen').style.display = 'block';
         }
-    });
 
-    enterNameButton.addEventListener('click', () => {
-        if (playerNameInput.value.trim() !== '') {
-            playerName = playerNameInput.value.trim();
-            players.push(playerName);
-            addPlayer(playerName);
-            nameScreen.classList.remove('visible');
-            gameBoard.classList.add('visible');
-        }
-    });
-
-    cards.forEach(card => {
-        card.addEventListener('click', () => {
-            //if (!castVoteButton.classList.contains('greyed-out') && playerName !== '') {
-                const selectedCard = card.textContent;
-                selectCard(card);
-                votes[playerName] = selectedCard;
-                updateCastVoteButtonState();
-            //}
-        });
-    });
-
-    castVoteButton.addEventListener('click', () => {
-        if (!castVoteButton.classList.contains('greyed-out') && playerName !== '') {
-            castVote(playerName);
-            if (votedPlayers.size === players.length) {
-                castVoteButton.textContent = 'Show votes!';
-                castVoteButton.removeEventListener('click', castVoteHandler);
-                castVoteButton.addEventListener('click', showVotes);
-                resetVotesButton.classList.remove('greyed-out');
+        function enterName() {
+            const playerName = document.getElementById('playerName').value.trim();
+            if (playerName !== '') {
+                players.push(playerName);
+                document.getElementById('name-input-screen').style.display = 'none';
+                setupGameBoard();
             }
         }
-    });
 
-    resetVotesButton.addEventListener('click', () => {
-        resetVotes();
-    });
+        function setupGameBoard() {
+            document.getElementById('game-board').style.display = 'block';
 
-    newGameButton.addEventListener('click', () => {
-        location.reload();
-    });
-
-    invitePlayersButton.addEventListener('click', () => {
-        const gameLink = window.location.href;
-        alert(`Invite others to join with this link: ${gameLink}`);
-    });
-
-    exitGameButton.addEventListener('click', () => {
-        location.reload();
-    });
-
-    function addPlayer(name) {
-        const playerBox = document.createElement('div');
-        playerBox.classList.add('player-box');
-        playerBox.textContent = name;
-        playersDiv.appendChild(playerBox);
-    }
-
-    function selectCard(card) {
-        cards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-    }
-
-    function updateCastVoteButtonState() {
-        const selectedCard = document.querySelector('.card.selected');
-        if (selectedCard) {
-            castVoteButton.classList.remove('greyed-out');
-        } else {
-            castVoteButton.classList.add('greyed-out');
-        }
-    }
-
-    function castVote(player) {
-        votedPlayers.add(player);
-        const playerBoxes = document.querySelectorAll('.player-box');
-        playerBoxes.forEach(box => {
-            if (box.textContent === player) {
-                box.style.backgroundColor = 'green';
-            }
-        });
-    }
-
-    function showVotes() {
-        players.forEach(name => {
-            const playerBoxes = document.querySelectorAll('.player-box');
-            playerBoxes.forEach(box => {
-                if (box.textContent === name) {
-                    const voteValue = votes[name] || '?';
-                    box.innerHTML = `<div class="card">${voteValue}</div><p>${name}</p>`;
-                    box.style.backgroundColor = '#ccc';
-                }
+            // Display player boxes
+            let playerBoxesHtml = '';
+            players.forEach(player => {
+                playerBoxesHtml += `<div class="player-box" id="${player}-box">${player}</div>`;
             });
+            document.getElementById('playerBoxes').innerHTML = playerBoxesHtml;
+
+            // Display voting cards
+            const votingCards = [0, 1, 2, 5, 8, 13, 20, 40, '?'];
+            let voteCardsHtml = '';
+            votingCards.forEach(card => {
+                voteCardsHtml += `<div class="vote-card" id="card-${card}" onclick="selectCard('${card}')">${card}</div>`;
+            });
+            document.getElementById('voteCards').innerHTML = voteCardsHtml;
+        }
+
+        function selectCard(card) {
+            if (!votesSubmitted) {
+                selectedCard = card;
+                const cards = document.querySelectorAll('.vote-card');
+                cards.forEach(cardElement => {
+                    cardElement.classList.remove('selected');
+                });
+                document.getElementById(`card-${card}`).classList.add('selected');
+                document.getElementById('castVoteButton').disabled = false;
+            }
+        }
+
+        function castVote() {
+            if (!votesSubmitted) {
+                // Simulating vote casting (change color of player box)
+                players.forEach(player => {
+                    const playerBox = document.getElementById(`${player}-box`);
+                    playerBox.style.backgroundColor = 'lightgreen';
+                });
+                document.getElementById('castVoteButton').disabled = true;
+                document.getElementById('resetVotesButton').disabled = false;
+                document.getElementById('showVotesButton').style.display = 'inline-block';
+                votesSubmitted = true;
+            }
+        }
+
+        function resetVotes() {
+            if (votesSubmitted) {
+                // Reset vote display (change color of player box back to default)
+                players.forEach(player => {
+                    const playerBox = document.getElementById(`${player}-box`);
+                    playerBox.style.backgroundColor = '#f0f0f0';
+                    playerBox.innerHTML = player;
+                });
+                document.getElementById('castVoteButton').disabled = false;
+                document.getElementById('resetVotesButton').disabled = true;
+                document.getElementById('showVotesButton').style.display = 'none';
+                selectedCard = null;
+                document.querySelectorAll('.vote-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                votesSubmitted = false;
+            }
+        }
+
+        function showVotes() {
+            if (votesSubmitted) {
+                // Display selected votes in player boxes
+                players.forEach(player => {
+                    const playerBox = document.getElementById(`${player}-box`);
+                    playerBox.innerHTML = `<div>${selectedCard}</div><div>${player}</div>`;
+                });
+            }
+        }
+
+        function exitGame() {
+            // Reset game state and return to opening screen
+            players = [];
+            selectedCard = null;
+            votesSubmitted = false;
+            document.getElementById('game-board').style.display = 'none';
+            document.getElementById('name-input-screen').style.display = 'none';
+            document.getElementById('opening-screen').style.display = 'block';
+        }
+
+        // Enable enter button when player name is entered
+        document.getElementById('playerName').addEventListener('input', function() {
+            const enterButton = document.getElementById('enterButton');
+            enterButton.disabled = this.value.trim() === '';
         });
-        castVoteButton.textContent = 'Cast your vote';
-        castVoteButton.classList.add('greyed-out');
-        castVoteButton.EventListener('click', showVotes);
-        castVoteButton.addEventListener('click', castVoteHandler);
-        resetVotesButton.classList.remove('greyed-out');
-    }
-
-    function resetVotes() {
-        votes = {};
-        votedPlayers.clear();
-        cards.forEach(card => card.classList.remove('selected'));
-        const playerBoxes = document.querySelectorAll('.player-box');
-        playerBoxes.forEach(box => {
-            box.style.backgroundColor = '#ccc';
-            box.innerHTML = `${box.textContent}`;
-        });
-        updateCastVoteButtonState();
-    }
-
-    function castVoteHandler() {
-        castVote(playerName);
-    }
-</script>
-
+    </script>
 </body>
 </html>
